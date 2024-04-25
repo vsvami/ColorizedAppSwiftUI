@@ -7,133 +7,84 @@
 
 import SwiftUI
 
-enum FocusField {
-    case redTF, greenTF, blueTF
-}
-
 struct ContentView: View {
-    @State private var redValue = Double.random(in: 0...255)
-    @State private var greenValue = Double.random(in: 0...255)
-    @State private var blueValue = Double.random(in: 0...255)
+    @State private var red = Double.random(in: 0...255).rounded()
+    @State private var green = Double.random(in: 0...255).rounded()
+    @State private var blue = Double.random(in: 0...255).rounded()
     
-    @State private var redTextFieldValue = ""
-    @State private var greenTextFieldValue = ""
-    @State private var blueTextFieldValue = ""
-    
-    @State private var isPresented = false
-    
-    @FocusState private var isTextFieldFocused: FocusField?
+    @FocusState private var focusedField: FocusField?
     
     var body: some View {
         ZStack {
-            Color.backgroundBlue
-                .ignoresSafeArea()
-                .onTapGesture {
-                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                    setValue()
+            VStack(spacing: 30) {
+                ColorView(redValue: red, greenValue: green, blueValue: blue)
+                
+                VStack {
+                    ColorSliderView(value: $red, color: .red)
+                        .focused($focusedField, equals: .red)
+                    ColorSliderView(value: $green, color: .green)
+                        .focused($focusedField, equals: .green)
+                    ColorSliderView(value: $blue, color: .blue)
+                        .focused($focusedField, equals: .blue)
                 }
-            
-            VStack {
-                ColorView(
-                    redValue: redValue,
-                    greenValue: greenValue,
-                    blueValue: blueValue
-                )
-                .padding(.bottom, 30)
-                
-                colorSliderView(
-                    value: $redValue,
-                    textFieldValue: $redTextFieldValue,
-                    isTextFieldFocused: _isTextFieldFocused, tintColor: .red,
-                    field: .redTF
-                )
-                
-                colorSliderView(
-                    value: $greenValue,
-                    textFieldValue: $greenTextFieldValue,
-                    isTextFieldFocused: _isTextFieldFocused, tintColor: .green,
-                    field: .greenTF
-                )
-                
-                colorSliderView(
-                    value: $blueValue,
-                    textFieldValue: $blueTextFieldValue,
-                    isTextFieldFocused: _isTextFieldFocused, tintColor: .blue,
-                    field: .blueTF
-                )
-         
+                .frame(height: 150)
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Button(action: previousField) {
+                            Image(systemName: "chevron.up")
+                        }
+                        Button(action: nextField) {
+                            Image(systemName: "chevron.down")
+                        }
+                        Spacer()
+                        Button("Done") {
+                            focusedField = nil
+                        }
+                    }
+                }
                 Spacer()
             }
             .padding()
-        }
-        .toolbar {
-            ToolbarItem(placement: .keyboard) {
-                HStack {
-                    Spacer()
-                    Button("Done") {
-                        setValue()
-                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                    }
-                    .alert("Wrong format", isPresented: $isPresented, actions: {}) {
-                        Text("Please enter value from 0 to 255")
-                    }
-                }
+            .background(.backgroundBlue)
+            .onTapGesture {
+                focusedField = nil
             }
         }
     }
+}
+
+extension ContentView {
+    enum FocusField {
+        case red, green, blue
+    }
     
-    private func checkValue(_ textFieldValue: String) -> Double {
-        if let value = Double(textFieldValue), value >= 0, value <= 255  {
-            return value
-        } else {
-            isPresented.toggle()
-            return 0
+    private func nextField() {
+        switch focusedField {
+        case .red:
+            focusedField = .green
+        case .green:
+            focusedField = .blue
+        case .blue:
+            focusedField = .red
+        case .none:
+            focusedField = nil
         }
     }
     
-    private func setValue() {
-        switch isTextFieldFocused {
-        case .redTF:
-            redValue = checkValue(redTextFieldValue)
-            redTextFieldValue = ""
-        case .greenTF:
-            greenValue = checkValue(greenTextFieldValue)
-            greenTextFieldValue = ""
-        case .blueTF:
-            blueValue = checkValue(blueTextFieldValue)
-            blueTextFieldValue = ""
-        case nil:
-            break
+    private func previousField() {
+        switch focusedField {
+        case .red:
+            focusedField = .blue
+        case .green:
+            focusedField = .red
+        case .blue:
+            focusedField = .green
+        case .none:
+            focusedField = nil
         }
     }
 }
 
 #Preview {
     ContentView()
-}
-
-struct colorSliderView: View {
-    @Binding var value: Double
-    @Binding var textFieldValue: String
-    
-    @FocusState var isTextFieldFocused: FocusField?
-    
-    let tintColor: Color
-    let field: FocusField
-
-    var body: some View {
-        HStack {
-            Text(lround(value).formatted())
-                .frame(width: 40)
-                .foregroundStyle(.white)
-            Slider(value: $value, in: 0...255, step: 1)
-                .tint(tintColor)
-            TextField(lround(value).formatted(), text: $textFieldValue)
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 45)
-                .multilineTextAlignment(.trailing)
-                .keyboardType(.numberPad)
-                .focused($isTextFieldFocused, equals: field)
-        }
-    }
 }
